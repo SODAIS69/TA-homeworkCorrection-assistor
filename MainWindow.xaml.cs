@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -34,10 +35,6 @@ namespace homerworker
             HwListParse();
             // MetadataWrite();
             MetadataLoader();
-
-            MetadataWrite("30678", "5-1", 69);
-            MetadataWrite("106408525", "1-1.c", 50);
-            MetadataWrite("109423069", "5-8", 444);
         }
         private void HwListParse()
         {
@@ -58,6 +55,11 @@ namespace homerworker
 
         private Student_Metadata MetadataSeek(string StudentID,string HomeworkName)
         {
+
+            if (StudentMetadata == null)
+            {
+                StudentMetadata = new List<Student_Metadata>();
+            }
             bool foundStudent = false;
             foreach (Student_Metadata singleStudent in StudentMetadata)
             {
@@ -100,6 +102,12 @@ namespace homerworker
         {
 
             bool foundStudent = false;
+
+            if (StudentMetadata==null)
+            {
+                StudentMetadata = new List<Student_Metadata>();
+            }
+
             foreach (Student_Metadata singleStudent in StudentMetadata)
             {
                 if (singleStudent.Student ==StudentID)
@@ -217,14 +225,20 @@ namespace homerworker
                // student_lv.Items.Clear();
 
                 hwDocument.Clear();
-                hwDocument_lv.Items.Clear();
+                //hwDocument_lv.Items.Clear();
+                hwDocument_lv.ItemsSource = null;
 
-
-                studentHwListRead(hw[hwSlection_lb.SelectedIndex]);
-               // student.Add();
-
+                // student.Add();
+                LoadStudent();
             }
         }
+        private void LoadStudent()
+        {
+            student_lv.ItemsSource = null;
+
+            studentHwListRead(hw[hwSlection_lb.SelectedIndex]);
+        }
+        
         private void studentHwListRead(string hwDirectory)
         {
             string _path = homerworker.Properties.Settings.Default.directoryPath;
@@ -241,6 +255,21 @@ namespace homerworker
 
                     id.Split('_');
                     student.Add(System.IO.Path.GetFileName(readid));
+
+
+                    //取HW
+                    string hwSeq =(string) hwSlection_lb.SelectedItem;
+                    hwSeq = hwSeq.Substring(2);
+
+                    Student_Metadata sm= StudentMetadata.Find(student => student.Student.Equals(id));
+                    //開頭一致的傳回
+                   
+                   List<Hw_Metadata> hw = sm.Hw_Metadatas.FindAll(hw_ =>
+                   hw_.Title.Split('_')
+                   .Select((string x)=>new {Titles=x[0]})
+                   .Where(x=>x.Titles==hwSeq));
+
+
                     
                     items.Add(new Student { grade = "1-1:69", id = $"{id}" });
                     
@@ -258,7 +287,7 @@ namespace homerworker
         {
 
             //顯示於listview or lb
-            public string quest { get; set; }
+            public string homeworkName { get; set; }
             public int grade { get; set; }
         }
         
@@ -266,33 +295,37 @@ namespace homerworker
         private void student_lv_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
 
+            LoadHomework();
             
+        }
+        private void LoadHomework()
+        {
             if (student_lv.SelectedIndex != -1)
             {
-                string _path = homerworker.Properties.Settings.Default.directoryPath + "\\"+hw[hwSlection_lb.SelectedIndex]+"\\" + student[student_lv.SelectedIndex] + "\\";
+                string _path = homerworker.Properties.Settings.Default.directoryPath + "\\" + hw[hwSlection_lb.SelectedIndex] + "\\" + student[student_lv.SelectedIndex] + "\\";
 
-                _path= DirectorySearch(_path);
-                string[] document=Directory.GetFiles(_path,"*.c");
+                _path = DirectorySearch(_path);
+                string[] document = Directory.GetFiles(_path, "*.c");
 
                 hwDocument.Clear();
 
-               Student selectedItem = (Student)student_lv.SelectedItem;
+                Student selectedItem = (Student)student_lv.SelectedItem;
 
                 string studentID = selectedItem.id;
-                
+
 
 
                 List<HomeworkKWSK> hwdoc = new List<HomeworkKWSK>();
 
                 foreach (string item in document)
                 {
-                   string _name = System.IO.Path.GetFileName(item);
-                    Student_Metadata sm= MetadataSeek(studentID, _name);
+                    string _name = System.IO.Path.GetFileName(item);
+                    Student_Metadata sm = MetadataSeek(studentID, _name);
                     int score = 0;
-                    if (sm!=null)
+                    if (sm != null)
                     {
-                       Hw_Metadata aa= sm.Hw_Metadatas.Find(aHomework =>aHomework.Title.Equals(_name));
-                        if (aa!=null)
+                        Hw_Metadata aa = sm.Hw_Metadatas.Find(aHomework => aHomework.Title.Equals(_name));
+                        if (aa != null)
                         {
                             score = aa.Score;
                         }
@@ -302,7 +335,7 @@ namespace homerworker
 
                     homeworkDocName_label.Content = "檔名:";
                     score_txt.Text = "";
-                    hwdoc.Add(new HomeworkKWSK { grade =score, quest = $"{_name}" });
+                    hwdoc.Add(new HomeworkKWSK { grade = score, homeworkName = $"{_name}" });
                 }
 
                 hwDocument_lv.ItemsSource = hwdoc;
@@ -341,7 +374,7 @@ namespace homerworker
             if (selectedhomeworkKWSK!=null)
             {
                 int score = selectedhomeworkKWSK.grade;
-                string homeworkName = selectedhomeworkKWSK.quest;
+                string homeworkName = selectedhomeworkKWSK.homeworkName;
 
                 homeworkDocName_label.Content = $"檔名:{homeworkName}";
                 score_txt.Text = score.ToString();
@@ -350,11 +383,40 @@ namespace homerworker
             {
                 homeworkDocName_label.Content = "檔名:";
                 score_txt.Text = "";
+            }           
+        }
+
+
+        private void saveBtn_Click(object sender, RoutedEventArgs e)
+        {
+
+            Student hw_ =(Student) student_lv.SelectedItem;
+            HomeworkKWSK kWSK_ = (HomeworkKWSK)hwDocument_lv.SelectedItem;
+
+            if ((hw_!=null)&&(kWSK_!=null))
+            {
+                string id_ = hw_.id;
+                int score_ = Convert.ToInt32( score_txt.Text);
+                string hwName_ = kWSK_.homeworkName;
+
+                MetadataWrite(id_, hwName_, score_);
+
+                LoadHomework();
+
             }
-           
 
+        }
 
+        private void score_txt_PreviewTextInput(object sender, TextCompositionEventArgs e)
+        {
 
+            e.Handled = !IsTextAllowed(e.Text);
+        }
+
+        private static readonly Regex _regex = new Regex("[^0-9.-]+"); //regex that matches disallowed text
+        private static bool IsTextAllowed(string text)
+        {
+            return !_regex.IsMatch(text);
         }
     }
 }
