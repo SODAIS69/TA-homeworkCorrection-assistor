@@ -309,7 +309,8 @@ namespace homerworker
                 string _path = homerworker.Properties.Settings.Default.directoryPath + "\\" + hw[hwSlection_lb.SelectedIndex] + "\\" + student[student_lv.SelectedIndex] + "\\";
 
                 _path = DirectorySearch(_path);
-                string[] document = Directory.GetFiles(_path, "*.c");
+                string[] document = Directory.GetFiles(_path);
+                //string[] document = Directory.GetFiles(_path, "*.c");
 
                 hwDocument.Clear();
 
@@ -357,6 +358,27 @@ namespace homerworker
             }
             else if(directories.Length>1)
             {
+
+                for (int i = 0; i < directories.Length; i++)
+                {
+                    string n = new DirectoryInfo(directories[i]).Name;
+                    if (n== "__MACOSX")
+                    {
+                        directories = directories.Where(val =>new DirectoryInfo(val).Name != "__MACOSX").ToArray();
+                        break;
+                    }
+                }
+
+                if (directories.Length==1)
+                {
+                    return DirectorySearch(directories[0]);
+                }
+                else if(directories.Length==0)
+                {
+                    return directory;
+                }
+                
+                
                 System.Windows.Forms.MessageBox.Show("太多資料夾ㄌ");
                 return directory;
 
