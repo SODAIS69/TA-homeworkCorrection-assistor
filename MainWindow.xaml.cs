@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -17,6 +19,7 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using Newtonsoft.Json;
 using static homerworker.MainWindow;
+using Path = System.IO.Path;
 
 namespace homerworker
 {
@@ -209,6 +212,7 @@ namespace homerworker
         }
         public class Hw_Metadata
         {
+            
             public string Title  { get; set; }
             public int Score { get; set; }
         }
@@ -250,10 +254,9 @@ namespace homerworker
                 List<Student> items = new List<Student>();
                 foreach (string readid in studentId)
                 {
-                    string[] hw_id = System.IO.Path.GetFileName(readid).Split('_'); //路徑取資料夾名
-                    string id = hw_id[1];//hw1_109423069 取右
+                    string hw_id = System.IO.Path.GetFileName(readid); //路徑取資料夾名
+                    string id = hw_id;//hw1_109423069 取右
 
-                    id.Split('_');
                     student.Add(System.IO.Path.GetFileName(readid));
 
 
@@ -261,13 +264,13 @@ namespace homerworker
                     string hwSeq =(string) hwSlection_lb.SelectedItem;
                     hwSeq = hwSeq.Substring(2);
 
-                    Student_Metadata sm= StudentMetadata.Find(student => student.Student.Equals(id));
+                    //Student_Metadata sm= StudentMetadata.Find(student => student.Student.Equals(id));
                     //開頭一致的傳回
                    
-                   List<Hw_Metadata> hw = sm.Hw_Metadatas.FindAll(hw_ =>
-                   hw_.Title.Split('_')
-                   .Select((string x)=>new {Titles=x[0]})
-                   .Where(x=>x.Titles==hwSeq));
+                   //List<Hw_Metadata> hw = sm.Hw_Metadatas.FindAll(hw_ =>
+                   //hw_.Title.Split('_')
+                   //.Select((string x)=>new {Titles=x[0]})
+                   //.Where(x=>x.Titles==hwSeq));
 
 
                     
@@ -286,6 +289,7 @@ namespace homerworker
         public class HomeworkKWSK
         {
 
+            public string Path { get; set; }
             //顯示於listview or lb
             public string homeworkName { get; set; }
             public int grade { get; set; }
@@ -335,7 +339,7 @@ namespace homerworker
 
                     homeworkDocName_label.Content = "檔名:";
                     score_txt.Text = "";
-                    hwdoc.Add(new HomeworkKWSK { grade = score, homeworkName = $"{_name}" });
+                    hwdoc.Add(new HomeworkKWSK { grade = score, homeworkName = $"{_name}" ,Path=item});
                 }
 
                 hwDocument_lv.ItemsSource = hwdoc;
@@ -417,6 +421,57 @@ namespace homerworker
         private static bool IsTextAllowed(string text)
         {
             return !_regex.IsMatch(text);
+        }
+
+        private void ImportBtn_Click(object sender, RoutedEventArgs e)
+        {
+
+            System.IO.DirectoryInfo di = new DirectoryInfo("temp");
+
+            foreach (FileInfo file in di.GetFiles())
+            {
+                file.Delete();
+            }
+            foreach (DirectoryInfo dir in di.GetDirectories())
+            {
+                dir.Delete(true);
+            }
+
+            OpenFileDialog open = new OpenFileDialog();
+            
+            if (open.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            {
+                ZipFile.ExtractToDirectory(open.FileName, "temp");
+            }
+            string [] path= Directory.GetDirectories("temp");
+            if (path.Length>0)
+            {
+                foreach (string folder in path)
+                {
+                    string destPath = DirectorySearch(folder);
+                    string[] zips = Directory.GetFiles(destPath, "*.zip");
+                    if (zips.Length>0)
+                    {
+                        foreach (string zip in zips)
+                        {
+                            ZipFile.ExtractToDirectory(zip, DirectorySearch(folder));
+                        }
+                    }
+
+                   
+                }
+            }
+            string dire = Path.Combine(Directory.GetCurrentDirectory(), "temp");
+            string proj = homerworker.Properties.Settings.Default.directoryPath;
+            Process.Start("explorer.exe",dire);
+            Process.Start("explorer.exe", proj);
+
+        }
+
+        private void hwDocument_lv_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            HomeworkKWSK kWSK=(HomeworkKWSK) hwDocument_lv.SelectedItem;
+            Process.Start(kWSK.Path);
         }
     }
 }
