@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
@@ -37,7 +38,12 @@ namespace homerworker
             InitializeComponent();
             HwListParse();
             // MetadataWrite();
+            
             MetadataLoader();
+        }
+        private void CheckPath()
+        {
+
         }
         private void HwListParse()
         {
@@ -241,6 +247,11 @@ namespace homerworker
             student_lv.ItemsSource = null;
 
             studentHwListRead(hw[hwSlection_lb.SelectedIndex]);
+
+            //https://www.wpf-tutorial.com/listview-control/listview-sorting/
+            //sorting
+            CollectionView view = (CollectionView)CollectionViewSource.GetDefaultView(student_lv.ItemsSource);
+            view.SortDescriptions.Add(new SortDescription("id", ListSortDirection.Ascending));
         }
         
         private void studentHwListRead(string hwDirectory)
