@@ -458,7 +458,10 @@ namespace homerworker
 
         private void ImportBtn_Click(object sender, RoutedEventArgs e)
         {
-
+            if (!Directory.Exists("temp"))
+            {
+                Directory.CreateDirectory("temp");
+            }
             System.IO.DirectoryInfo di = new DirectoryInfo("temp");
 
             foreach (FileInfo file in di.GetFiles())
